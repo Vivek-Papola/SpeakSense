@@ -28,6 +28,18 @@ function Navigation({ user, onLogout }) {
             Practice
           </Link>
           <Link
+            to="/dashboard"
+            className={location.pathname === '/dashboard' ? 'active' : ''}
+          >
+            Dashboard
+          </Link>
+          <Link
+            to="/assistant"
+            className={location.pathname === '/assistant' ? 'active' : ''}
+          >
+            Assistant
+          </Link>
+          <Link
             to="/account"
             className={location.pathname === '/account' ? 'active' : ''}
           >

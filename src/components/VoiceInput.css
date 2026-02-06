@@ -1,8 +1,8 @@
 .voice-input-container {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--card-shadow);
   margin: 1rem 0;
 }
 
@@ -10,146 +10,69 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .voice-input-header h3 {
   margin: 0;
-  color: #333;
-  font-size: 1.5rem;
+  color: var(--text);
+  font-size: 1.125rem;
 }
 
 .recording-indicator {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #e11d48;
+  color: var(--danger);
   font-weight: 600;
 }
 
 .recording-dot {
-  width: 12px;
-  height: 12px;
-  background: #e11d48;
+  width: 10px;
+  height: 10px;
+  background: var(--danger);
   border-radius: 50%;
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+  0%, 100% { opacity: 1 }
+  50% { opacity: 0.45 }
 }
 
-.voice-controls {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-}
+.voice-controls { display:flex; justify-content:center; margin-bottom:1rem }
+.record-button { display:inline-flex; align-items:center; gap:0.75rem; padding:0.6rem 1rem; border:none; border-radius:999px; font-size:0.95rem; font-weight:700; cursor:pointer; transition:transform 0.12s, box-shadow 0.12s }
+.record-button.start { background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:white }
+.record-button.stop { background: linear-gradient(90deg,var(--danger), #b91c1c); color:white }
+.record-button:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(15,23,36,0.06) }
 
-.record-button {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 2rem;
-  border: none;
-  border-radius: 50px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
+.recorder-row { display:flex; align-items:center; gap:1rem }
+.waveform { width:60%; height:64px; background: linear-gradient(180deg, rgba(15,23,36,0.02), rgba(15,23,36,0.03)); border-radius:8px; display:flex; align-items:center; justify-content:center }
+.waveform-bars { width:88%; height:18px; background: linear-gradient(90deg, rgba(15,23,36,0.06), rgba(15,23,36,0.02)); border-radius:6px; position:relative; overflow:hidden }
+.waveform-bars.animate::before { content:''; position:absolute; left:0; top:0; height:100%; width:20%; background: linear-gradient(90deg, rgba(59,130,246,0.18), rgba(59,130,246,0.05)); animation: sweep 1s linear infinite }
 
-.record-button.start {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-}
+@keyframes sweep { 0% { transform: translateX(-120%) } 100% { transform: translateX(220%) } }
 
-.record-button.stop {
-  background: linear-gradient(135deg, #e11d48 0%, #be185d 100%);
-  color: white;
-}
+.record-circle { width:64px; height:64px; border-radius:50%; border:none; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 8px 24px rgba(2,6,23,0.08); transition:transform 0.12s, box-shadow 0.12s }
+.record-circle.start { background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:#fff }
+.record-circle.stop { background: linear-gradient(90deg,var(--danger), #b91c1c); color:#fff }
+.record-circle:focus { outline:3px solid rgba(59,130,246,0.16); transform:translateY(-3px) }
 
-.record-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-}
+.status-badge { display:inline-flex; align-items:center; gap:0.5rem; padding:0.25rem 0.6rem; border-radius:999px; font-weight:700 }
+.status-badge.live { background: linear-gradient(90deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06)); color:var(--success) }
+.status-badge.idle { background: rgba(15,23,36,0.03); color:var(--muted) }
+.status-dot { width:10px; height:10px; border-radius:50%; background:currentColor; display:inline-block }
 
-.record-button:active {
-  transform: translateY(0);
-}
+.final-text { color:var(--text) }
+.interim-text { color:var(--muted); font-style:italic; margin-top:0.25rem }
 
-.recording-stats {
-  display: flex;
-  gap: 2rem;
-  justify-content: center;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background: #f9fafb;
-  border-radius: 8px;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.stat-label {
-  font-size: 0.9rem;
-  color: #666;
-  font-weight: 500;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #333;
-}
-
-.stat-value.met {
-  color: #10b981;
-}
-
-.stat-value.not-met {
-  color: #e11d48;
-}
-
-.error-message {
-  background: #fee;
-  color: #c33;
-  padding: 0.75rem;
-  border-radius: 8px;
-  margin-top: 1rem;
-  text-align: center;
-  font-size: 0.9rem;
-}
-
-.transcript-container {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 2px solid #e0e0e0;
-}
-
-.transcript-container h4 {
-  margin: 0 0 0.75rem 0;
-  color: #333;
-  font-size: 1.1rem;
-}
-
-.transcript-text {
-  background: #f9fafb;
-  padding: 1rem;
-  border-radius: 8px;
-  min-height: 100px;
-  max-height: 300px;
-  overflow-y: auto;
-  color: #333;
-  line-height: 1.6;
-  font-size: 1rem;
-}
-
+.recording-stats { display:flex; gap:1.5rem; justify-content:center; margin-bottom:1rem; padding:0.75rem; background:var(--glass); border-radius:8px }
+.stat-item { display:flex; flex-direction:column; align-items:center; gap:0.25rem }
+.stat-label { font-size:0.85rem; color:var(--muted); font-weight:600 }
+.stat-value { font-size:1.25rem; font-weight:800; color:var(--text) }
+.stat-value.met { color:var(--success) }
+.stat-value.not-met { color:var(--danger) }
+.error-message { background:#fff4f4; color:var(--danger); padding:0.6rem; border-radius:8px; margin-top:0.75rem; text-align:center; font-size:0.9rem }
+.transcript-container { margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(15,23,36,0.04) }
+.transcript-container h4 { margin:0 0 0.5rem 0; color:var(--text); font-size:1rem }
+.transcript-text { background:transparent; padding:0.75rem; border-radius:6px; min-height:80px; max-height:220px; overflow-y:auto; color:var(--text); line-height:1.5; font-size:0.95rem }

@@ -1,332 +1,287 @@
-import { useState, useEffect, useRef } from 'react'
-import VoiceInput from '../components/VoiceInput'
-import Feedback from '../components/Feedback'
+import { useNavigate } from 'react-router-dom'
 import './Home.css'
-
-const randomWords = [
-  'Adventure', 'Journey', 'Discovery', 'Success', 'Challenge', 'Opportunity',
-  'Innovation', 'Creativity', 'Passion', 'Dream', 'Achievement', 'Progress',
-  'Wisdom', 'Knowledge', 'Experience', 'Growth', 'Freedom', 'Happiness',
-  'Friendship', 'Family', 'Love', 'Hope', 'Courage', 'Strength', 'Resilience',
-  'Nature', 'Travel', 'Music', 'Art', 'Science', 'Technology', 'Education',
-  'Health', 'Fitness', 'Food', 'Culture', 'History', 'Future', 'Present',
-  'Moment', 'Memory', 'Tradition', 'Change', 'Stability', 'Balance', 'Harmony'
-]
+import { useEffect, useRef } from 'react'
 
 function Home() {
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
-  const [currentTopic, setCurrentTopic] = useState('')
-  const [transcript, setTranscript] = useState('')
-  const [duration, setDuration] = useState(0)
-  const [hasCompleted, setHasCompleted] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [showFlash, setShowFlash] = useState(false)
-  const [timeRemaining, setTimeRemaining] = useState(120) // 2 minutes in seconds
-  const [history, setHistory] = useState([])
-  const [currentScore, setCurrentScore] = useState(null)
-  const voiceInputRef = useRef(null)
-  const progressIntervalRef = useRef(null)
+  const navigate = useNavigate()
+  const sectionsRef = useRef([])
 
   useEffect(() => {
-    getRandomWord()
-    loadHistory()
-  }, [])
-
-  const loadHistory = () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const historyKey = `practice_history_${user.email || 'default'}`
-    const savedHistory = localStorage.getItem(historyKey)
-    if (savedHistory) {
-      setHistory(JSON.parse(savedHistory))
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -100px 0px'
     }
-  }
 
-  const saveToHistory = (scoreData) => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const historyKey = `practice_history_${user.email || 'default'}`
-    const historyEntry = {
-      id: Date.now(),
-      date: new Date().toISOString(),
-      topic: currentTopic,
-      score: scoreData.overallScore,
-      duration: scoreData.duration,
-      totalWords: scoreData.totalWords,
-      stopwords: scoreData.stopwordCount,
-      pronunciationMistakes: scoreData.pronunciationMistakes,
-      fluencyErrors: scoreData.fluencyErrors,
-    }
-    const updatedHistory = [historyEntry, ...history]
-    setHistory(updatedHistory)
-    localStorage.setItem(historyKey, JSON.stringify(updatedHistory))
-  }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-in')
+        }
+      })
+    }, observerOptions)
 
-  const getRandomWord = () => {
-    const randomIndex = Math.floor(Math.random() * randomWords.length)
-    setCurrentTopic(randomWords[randomIndex])
-    setTranscript('')
-    setDuration(0)
-    setHasCompleted(false)
-    setIsRecording(false)
-  }
-
-  const handleTranscript = (text) => {
-    setTranscript((prev) => prev + text)
-  }
-
-  const handleStop = (finalTranscript, finalDuration) => {
-    setTranscript(finalTranscript)
-    setDuration(finalDuration)
-    setHasCompleted(true)
-    setIsRecording(false)
-    setProgress(0)
-    setTimeRemaining(120)
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current)
-    }
-  }
-
-  const stopRecordingAfterTimer = () => {
-    if (voiceInputRef.current && voiceInputRef.current.stopRecording) {
-      voiceInputRef.current.stopRecording()
-    }
-  }
-
-  useEffect(() => {
-    if (isRecording) {
-     
-      setShowFlash(true)
-      setTimeout(() => setShowFlash(false), 300)
-      
-     
-      setTimeRemaining(120)
-      
-      
-      const totalDuration = 120
-      const updateInterval = 50 
-      const progressStep = (100 / (totalDuration * 1000)) * updateInterval
-      
-      progressIntervalRef.current = setInterval(() => {
-        setProgress((prev) => {
-          const newProgress = prev + progressStep
-          const elapsed = (newProgress / 100) * totalDuration
-          const remaining = Math.max(0, totalDuration - elapsed)
-          setTimeRemaining(Math.ceil(remaining))
-          
-          if (newProgress >= 100) {
-            clearInterval(progressIntervalRef.current)
-            setTimeRemaining(0)
-            
-            setTimeout(() => {
-              stopRecordingAfterTimer()
-            }, 100)
-            return 100
-          }
-          return newProgress
-        })
-      }, updateInterval)
-    } else {
-      setProgress(0)
-      setTimeRemaining(120)
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current)
-      }
-    }
+    sectionsRef.current.forEach((section) => {
+      if (section) observer.observe(section)
+    })
 
     return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current)
-      }
+      sectionsRef.current.forEach((section) => {
+        if (section) observer.unobserve(section)
+      })
     }
-  }, [isRecording])
+  }, [])
 
   return (
-    <div className="home-page">
-      <div className="practice-container">
-        <div className="practice-card">
-          <div className="practice-circle-wrapper">
-            {isRecording && (
-              <svg className="progress-ring" viewBox="0 0 100 100">
-                <circle
-                  className="progress-ring-background"
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  stroke="rgba(64, 224, 208, 0.2)"
-                  strokeWidth="4"
-                />
-                <circle
-                  className={`progress-ring-progress ${showFlash ? 'flash' : ''}`}
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  stroke="#40e0d0"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray={`${2 * Math.PI * 45}`}
-                  strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
-                  transform="rotate(-90 50 50)"
-                  style={{
-                    transition: progress === 0 ? 'none' : 'stroke-dashoffset 0.05s linear'
-                  }}
-                />
-              </svg>
-            )}
-            <button
-              type="button"
-              className={`practice-circle ${isRecording ? 'recording' : ''}`}
-              onClick={() => {
-                if (!isRecording) {
-                  setIsRecording(true)
-                  setHasCompleted(false)
-                  setTranscript('')
-                  setDuration(0)
-                  setProgress(0)
-                } else {
-                 
-                  if (voiceInputRef.current && voiceInputRef.current.stopRecording) {
-                    voiceInputRef.current.stopRecording()
-                  }
-                }
-              }}
-            >
-            <div className="practice-circle__icon">
-              <svg
-                width="90"
-                height="90"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                {/* Microphone body */}
-                <path
-                  d="M12 2C10.9 2 10 2.9 10 4V12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12V4C14 2.9 13.1 2 12 2Z"
-                  fill="currentColor"
-                  opacity="0.95"
-                />
-                {/* Microphone stand */}
-                <path
-                  d="M19 10V12C19 15.87 15.87 19 12 19C8.13 19 5 15.87 5 12V10H7V12C7 14.76 9.24 17 12 17C14.76 17 17 14.76 17 12V10H19Z"
-                  fill="currentColor"
-                  opacity="0.9"
-                />
-                {/* Base */}
-                <path
-                  d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22Z"
-                  fill="currentColor"
-                  opacity="0.85"
-                />
-                {/* Highlight on mic body */}
-                <ellipse
-                  cx="12"
-                  cy="7"
-                  rx="2"
-                  ry="1.5"
-                  fill="rgba(255, 255, 255, 0.4)"
-                />
-                {/* Sound waves (when recording) */}
-                {isRecording && (
-                  <>
-                    <path
-                      d="M6 8C6 8 4 10 4 12"
-                      stroke="rgba(255, 255, 255, 0.6)"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      fill="none"
-                    />
-                    <path
-                      d="M18 8C18 8 20 10 20 12"
-                      stroke="rgba(255, 255, 255, 0.6)"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      fill="none"
-                    />
-                  </>
-                )}
-              </svg>
-            </div>
-            <div className="practice-circle__copy">
-              <p className="practice-circle__eyebrow">{isRecording ? 'Tap to stop' : 'Tap to practice'}</p>
-              <h2>{isRecording ? 'Recording...' : 'Practice Speaking'}</h2>
-              {isRecording && (
-                <div className="timer-display">
-                  <span className="timer-value">
-                    {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
-                  </span>
-                </div>
-              )}
-              <p>{isRecording ? 'Tap to stop recording' : 'Tap the mic to start'}</p>
-            </div>
-          </button>
-          </div>
-          {currentTopic && (
-            <div 
-              className="word-display"
-              onClick={() => {
-                if (!isRecording) {
-                  getRandomWord()
-                }
-              }}
-              style={{ cursor: !isRecording ? 'pointer' : 'default' }}
-            >
-              <p className="word-label">Speak about:</p>
-              <p className={`word-text ${!isRecording ? 'clickable' : ''}`}>
-                {currentTopic}
-              </p>
-            </div>
-          )}
-          {isRecording && (
-            <div className="recording-section" style={{ display: 'none' }}>
-              <VoiceInput
-                ref={voiceInputRef}
-                onTranscript={handleTranscript}
-                onStop={handleStop}
-                minDuration={120}
-                autoStart={true}
-              />
-            </div>
-          )}
-          {hasCompleted && (
-            <div className="feedback-section">
-              <Feedback 
-                transcript={transcript} 
-                duration={duration}
-                onScoreCalculated={(scoreData) => {
-                  setCurrentScore(scoreData)
-                  saveToHistory(scoreData)
-                }}
-              />
-            </div>
-          )}
-          
-          {history.length > 0 && (
-            <div className="history-section">
-              <h3>Practice History</h3>
-              <div className="history-list">
-                {history.slice(0, 10).map((entry) => (
-                  <div key={entry.id} className="history-item">
-                    <div className="history-date">
-                      {new Date(entry.date).toLocaleDateString()}
-                    </div>
-                    <div className="history-details">
-                      <div className="history-topic">{entry.topic}</div>
-                      <div className="history-metrics">
-                        <span className="history-score">Score: {entry.score}/100</span>
-                        <span className="history-duration">
-                          {Math.floor(entry.duration / 60)}:{(entry.duration % 60).toString().padStart(2, '0')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+    <div className="home-page-new">
+      {/* SECTION 1: Hero Section - Blue Gradient */}
+      <section 
+        className="section hero-section"
+        ref={(el) => (sectionsRef.current[0] = el)}
+      >
+        <div className="section-background hero-bg"></div>
+        <div className="floating-shapes">
+          <div className="shape shape-1"></div>
+          <div className="shape shape-2"></div>
+          <div className="shape shape-3"></div>
+        </div>
+
+        <div className="container">
+          <div className="hero-content">
+            <h1 className="hero-title">
+              <span className="title-word">Master</span>
+              <span className="title-word">Your</span>
+              <span className="title-word">English</span>
+              <span className="title-word">Pronunciation</span>
+            </h1>
+            <p className="hero-subtitle">
+              Perfect Your Accent with AI-Powered Speech Analysis and Real-Time Feedback
+            </p>
+            <div className="hero-stats">
+              <div className="stat-item">
+                <div className="stat-number">1000+</div>
+                <div className="stat-label">Active Learners</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-number">50K+</div>
+                <div className="stat-label">Sessions</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-number">95%</div>
+                <div className="stat-label">Improvement</div>
               </div>
             </div>
-          )}
+            <div className="hero-cta-buttons">
+              <button className="btn-primary-hero" onClick={() => navigate('/practice')}>
+                Start Practicing Now
+              </button>
+              <button className="btn-secondary-hero" onClick={() => navigate('/dashboard')}>
+                View Dashboard →
+              </button>
+            </div>
+          </div>
+          <div className="hero-visual">
+            <div className="floating-card card-1">
+              <div className="card-badge">Real-Time</div>
+              <div className="card-text">Instant Feedback</div>
+            </div>
+            <div className="floating-card card-2">
+              <div className="card-badge">AI Powered</div>
+              <div className="card-text">Smart Analysis</div>
+            </div>
+            <div className="floating-card card-3">
+              <div className="card-badge">Track</div>
+              <div className="card-text">Your Progress</div>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* SECTION 2: Features Section - Purple Gradient */}
+      <section 
+        className="section features-section"
+        ref={(el) => (sectionsRef.current[1] = el)}
+      >
+        <div className="section-background features-bg"></div>
+        <div className="floating-shapes">
+          <div className="shape shape-4"></div>
+          <div className="shape shape-5"></div>
+        </div>
+
+        <div className="container">
+          <div className="section-header">
+            <h2 className="section-title">Powerful Features</h2>
+            <p className="section-subtitle">Everything you need to master your pronunciation</p>
+          </div>
+
+          <div className="features-grid">
+            <div className="feature-card feature-card-1">
+              <div className="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" fill="currentColor"/>
+                </svg>
+              </div>
+              <h3>Real-Time Analysis</h3>
+              <p>Get instant feedback on your pronunciation with phoneme-level accuracy</p>
+            </div>
+
+            <div className="feature-card feature-card-2">
+              <div className="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-2.16-2.66c-.23-.28-.62-.38-.96-.24-.34.13-.56.48-.56.84v4.2h12V9.5c0-.36-.22-.71-.56-.84-.34-.13-.73-.04-.96.24l-4.05 6.37z" fill="currentColor"/>
+                </svg>
+              </div>
+              <h3>Detailed Reports</h3>
+              <p>Comprehensive analysis with word-level insights and improvement areas</p>
+            </div>
+
+            <div className="feature-card feature-card-3">
+              <div className="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill="currentColor"/>
+                </svg>
+              </div>
+              <h3>Progress Tracking</h3>
+              <p>Monitor your improvements over time with beautiful charts and metrics</p>
+            </div>
+
+            <div className="feature-card feature-card-4">
+              <div className="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
+                </svg>
+              </div>
+              <h3>AI Recommendations</h3>
+              <p>Get personalized practice exercises based on your weaknesses</p>
+            </div>
+
+            <div className="feature-card feature-card-5">
+              <div className="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" fill="currentColor"/>
+                </svg>
+              </div>
+              <h3>Fluency Metrics</h3>
+              <p>Track speech rate, pauses, and filler words to improve flow</p>
+            </div>
+
+            <div className="feature-card feature-card-6">
+              <div className="feature-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M11 7h2v10h-2zm5-4v2h4V3zm0 16v2h4v-2zM8 6.5C4.69 6.5 2 9.19 2 12.5S4.69 18.5 8 18.5s6-2.69 6-6-2.69-6-6-6zm0 11c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" fill="currentColor"/>
+                </svg>
+              </div>
+              <h3>Personalized Learning</h3>
+              <p>Custom practice plans tailored to your learning style and goals</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 3: How It Works - Teal Gradient */}
+      <section 
+        className="section how-it-works-section"
+        ref={(el) => (sectionsRef.current[2] = el)}
+      >
+        <div className="section-background how-it-works-bg"></div>
+        <div className="floating-shapes">
+          <div className="shape shape-6"></div>
+          <div className="shape shape-7"></div>
+          <div className="shape shape-8"></div>
+        </div>
+
+        <div className="container">
+          <div className="section-header">
+            <h2 className="section-title">How SpeakSense Works</h2>
+            <p className="section-subtitle">Three simple steps to improve your pronunciation</p>
+          </div>
+
+          <div className="steps-container">
+            <div className="step-card step-1">
+              <div className="step-number">01</div>
+              <div className="step-circle">
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 14c1.66 0 3-1.34 3-3 0-1.65-1.34-3-3-3s-3 1.35-3 3c0 1.66 1.34 3 3 3zm0-8c2.76 0 5 2.24 5 5 0 2.76-2.24 5-5 5s-5-2.24-5-5c0-2.76 2.24-5 5-5zm-.9 10H8v3h3.1v-3zm4.8 0v3H16v-3z" fill="currentColor"/>
+                </svg>
+              </div>
+              <h3>Record</h3>
+              <p>Tap the mic and speak naturally about one of our suggested topics</p>
+            </div>
+
+            <div className="step-connector"></div>
+
+            <div className="step-card step-2">
+              <div className="step-number">02</div>
+              <div className="step-circle">
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-2.16-2.66c-.23-.28-.62-.38-.96-.24-.34.13-.56.48-.56.84v4.2h12V9.5c0-.36-.22-.71-.56-.84-.34-.13-.73-.04-.96.24l-4.05 6.37z" fill="currentColor"/>
+                </svg>
+              </div>
+              <h3>Analyze</h3>
+              <p>Our AI analyzes your pronunciation with phoneme-level accuracy</p>
+            </div>
+
+            <div className="step-connector"></div>
+
+            <div className="step-card step-3">
+              <div className="step-number">03</div>
+              <div className="step-circle">
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none">
+                  <path d="M19 12h-2v-2h-2v2h-2v2h2v2h2v-2h2v-2zm-8-6H9v2H7V6h4V4zm0 6H9v2H7v-2h4v-2zm0 6H9v2H7v-2h4v-2z" fill="currentColor"/>
+                </svg>
+              </div>
+              <h3>Improve</h3>
+              <p>Get detailed feedback and practice recommendations to level up</p>
+            </div>
+          </div>
+
+          <div className="cta-section-bottom">
+            <h3>Ready to Master Your Pronunciation?</h3>
+            <p>Join thousands of learners improving their English every day</p>
+            <button className="btn-large-cta" onClick={() => navigate('/practice')}>
+              Get Started Free →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 4: About Section - Blue Gradient (Optional) */}
+      <section 
+        className="section about-section"
+        ref={(el) => (sectionsRef.current[3] = el)}
+      >
+        <div className="section-background about-bg"></div>
+        <div className="container">
+          <div className="about-content">
+            <div className="about-text">
+              <h2>About SpeakSense</h2>
+              <p>
+                SpeakSense is a revolutionary AI-powered pronunciation coaching platform designed to help English learners master their accent and fluency. Whether you're preparing for interviews, presentations, or everyday conversations, SpeakSense gives you the tools and insights you need to communicate with confidence.
+              </p>
+              <ul className="about-features">
+                <li>🎯 Phoneme-level pronunciation analysis</li>
+                <li>📊 Real-time fluency tracking</li>
+                <li>🤖 AI-powered personalized recommendations</li>
+                <li>💾 Unlimited practice sessions</li>
+                <li>🏆 Progress reports and certificates</li>
+              </ul>
+            </div>
+            <div className="about-stats">
+              <div className="stat-large">
+                <div className="stat-num">1500+</div>
+                <div className="stat-desc">Active Users</div>
+              </div>
+              <div className="stat-large">
+                <div className="stat-num">85K+</div>
+                <div className="stat-desc">Practice Sessions</div>
+              </div>
+              <div className="stat-large">
+                <div className="stat-num">4.8★</div>
+                <div className="stat-desc">User Rating</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

@@ -4,7 +4,10 @@ import Login from './pages/Login'
 import Home from './pages/Home'
 import Practice from './pages/Practice'
 import Account from './pages/Account'
+import Dashboard from './pages/Dashboard'
+import AIAssistant from './pages/AIAssistant'
 import Navigation from './components/Navigation'
+import { ProgressProvider } from './context/ProgressContext'
 import './App.css'
 
 function App() {
@@ -50,9 +53,10 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="app">
-        <Navigation user={user} onLogout={handleLogout} />
-        <Routes>
+      <ProgressProvider>
+        <div className="app">
+          <Navigation user={user} onLogout={handleLogout} />
+          <Routes>
           <Route
             path="/login"
             element={
@@ -72,14 +76,27 @@ function App() {
             }
           />
           <Route
+            path="/dashboard"
+            element={
+              user ? <Dashboard /> : <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/assistant"
+            element={
+              user ? <AIAssistant /> : <Navigate to="/login" replace />
+            }
+          />
+          <Route
             path="/account"
             element={
               user ? <Account /> : <Navigate to="/login" replace />
             }
           />
           <Route path="/" element={<Navigate to={user ? "/home" : "/login"} replace />} />
-        </Routes>
-      </div>
+          </Routes>
+        </div>
+      </ProgressProvider>
     </BrowserRouter>
   )
 }

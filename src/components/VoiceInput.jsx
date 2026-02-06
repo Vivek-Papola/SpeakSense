@@ -4,6 +4,7 @@ import './VoiceInput.css'
 const VoiceInput = forwardRef(function VoiceInput({ onTranscript, onStop, minDuration = 120, autoStart = false }, ref) {
   const [isRecording, setIsRecording] = useState(autoStart)
   const [transcript, setTranscript] = useState('')
+  const [interim, setInterim] = useState('')
   const [duration, setDuration] = useState(0)
   const [error, setError] = useState('')
   const recognitionRef = useRef(null)
@@ -13,6 +14,7 @@ const VoiceInput = forwardRef(function VoiceInput({ onTranscript, onStop, minDur
   const stopRecording = () => {
     setIsRecording(false)
     isRecordingRef.current = false
+    setInterim('')
     
     if (recognitionRef.current) {
       recognitionRef.current.stop()
@@ -78,9 +80,13 @@ const VoiceInput = forwardRef(function VoiceInput({ onTranscript, onStop, minDur
         }
       }
 
-      setTranscript((prev) => prev + finalTranscript)
-      if (onTranscript) {
-        onTranscript(finalTranscript || interimTranscript)
+      if (finalTranscript) {
+        setTranscript((prev) => (prev ? prev + ' ' + finalTranscript : finalTranscript))
+        setInterim('')
+        if (onTranscript) onTranscript(finalTranscript)
+      } else {
+        setInterim(interimTranscript)
+        if (onTranscript) onTranscript(interimTranscript)
       }
     }
 
@@ -132,13 +138,70 @@ const VoiceInput = forwardRef(function VoiceInput({ onTranscript, onStop, minDur
   useImperativeHandle(ref, () => ({
     stopRecording: () => {
       stopRecording()
+    },
+    startRecording: () => {
+      startRecording()
     }
   }))
 
   return (
-    <div className="voice-input-container" style={{ display: 'none' }}>
-      {/* Hidden component - functionality only, no visual display */}
+    <div className="voice-input-container">
+      <div className="voice-input-header">
+        <h3>Live Recorder</h3>
+        <div>
+          <div className={`status-badge ${isRecording ? 'live' : 'idle'}`} aria-live="polite">
+            <span className="status-dot" aria-hidden />
+            <span className="status-text">{isRecording ? 'Recording' : 'Idle'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="recorder-row">
+        <div className="waveform" aria-hidden>
+          <div className={`waveform-bars ${isRecording ? 'animate' : ''}`} />
+        </div>
+
+        <div className="voice-controls">
+          <button
+            type="button"
+            className={`record-circle ${isRecording ? 'stop' : 'start'}`}
+            onClick={isRecording ? stopRecording : startRecording}
+            aria-pressed={isRecording}
+            aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+          >
+            {isRecording ? (
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6" width="12" height="12" rx="2" fill="#fff"/></svg>
+            ) : (
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="6" fill="#fff"/></svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="recording-stats" aria-live="polite">
+        <div className="stat-item">
+          <div className="stat-label">Duration</div>
+          <div className={`stat-value ${duration >= minDuration ? 'met' : 'not-met'}`}>{formatTime(duration)}</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-label">Min Required</div>
+          <div className="stat-value">{formatTime(minDuration)}</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-label">Status</div>
+          <div className="stat-value">{isRecording ? 'Live' : 'Stopped'}</div>
+        </div>
+      </div>
+
       {error && <div className="error-message">{error}</div>}
+
+      <div className="transcript-container">
+        <h4>Transcript</h4>
+        <div className="transcript-text">
+          <div className="final-text">{transcript || <span className="muted">No transcript yet...</span>}</div>
+          {interim ? <div className="interim-text">{interim}</div> : null}
+        </div>
+      </div>
     </div>
   )
 })
