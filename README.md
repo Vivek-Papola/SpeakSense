@@ -1,5 +1,7 @@
 # SpeakSense: AI Pronunciation & Fluency Coach
 
+Live Demo : https://speak-sense-chi.vercel.app/
+
 A comprehensive AI-powered system for real-time pronunciation and fluency assessment and coaching.
 
 ## Features
