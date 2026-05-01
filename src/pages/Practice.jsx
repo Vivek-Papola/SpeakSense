@@ -34,6 +34,8 @@ function Practice() {
   const [history, setHistory] = useState([])
   const [currentScore, setCurrentScore] = useState(null)
   const [lastAnalysis, setLastAnalysis] = useState(null)
+  const [apiAnalysis, setApiAnalysis] = useState(null)
+  const [isProcessing, setIsProcessing] = useState(false)
   
   const voiceInputRef = useRef(null)
   const progressIntervalRef = useRef(null)
@@ -88,9 +90,16 @@ function Practice() {
     setIsRecording(false)
     setProgress(0)
     setTimeRemaining(120)
+    setApiAnalysis(null)
+    setIsProcessing(true)
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current)
     }
+  }
+
+  const handleApiProcess = (apiResult) => {
+    setApiAnalysis(apiResult)
+    setIsProcessing(false)
   }
 
   const stopRecordingAfterTimer = () => {
@@ -191,11 +200,13 @@ function Practice() {
             <button
               type="button"
               className={`practice-circle ${isRecording ? 'recording' : ''}`}
-              onClick={() => {
+               onClick={() => {
                 if (!isRecording) {
                   setIsRecording(true)
                   setHasCompleted(false)
                   setLastAnalysis(null)
+                  setApiAnalysis(null)
+                  setIsProcessing(false)
                   setTranscript('')
                   setDuration(0)
                   setProgress(0)
@@ -295,17 +306,28 @@ function Practice() {
                 ref={voiceInputRef}
                 onTranscript={handleTranscript}
                 onStop={handleStop}
+                onAudioProcess={handleApiProcess}
                 minDuration={120}
                 autoStart={true}
               />
             </div>
           )}
 
-          {hasCompleted && (
+          {hasCompleted && isProcessing && (
+            <div className="feedback-section">
+              <div style={{ color: 'var(--muted)', textAlign: 'center', padding: '1.5rem' }}>
+                <h4>Processing your audio...</h4>
+                <p>Please wait while we send your recording to the feedback server.</p>
+              </div>
+            </div>
+          )}
+
+          {hasCompleted && !isProcessing && (
             <div className="feedback-section">
               <Feedback 
                 transcript={transcript} 
                 duration={duration}
+                apiAnalysis={apiAnalysis}
                 onScoreCalculated={(scoreData) => {
                   setCurrentScore(scoreData)
                   setLastAnalysis(scoreData)

@@ -38,6 +38,15 @@
   background: var(--glass);
 }
 
+.analysis-source {
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 .score-value {
   font-size: 3rem;
   font-weight: 700;

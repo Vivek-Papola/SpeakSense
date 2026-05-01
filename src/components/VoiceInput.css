@@ -57,6 +57,24 @@
 .record-circle.start { background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:#fff }
 .record-circle.stop { background: linear-gradient(90deg,var(--danger), #b91c1c); color:#fff }
 .record-circle:focus { outline:3px solid rgba(59,130,246,0.16); transform:translateY(-3px) }
+.record-circle:disabled { opacity:0.7; cursor:not-allowed; transform:none }
+
+@keyframes spin {
+  to { transform:rotate(360deg) }
+}
+
+.record-circle svg {
+  animation:none
+}
+
+.record-circle.recording svg {
+  animation:pulse 1s ease-in-out infinite alternate
+}
+
+@keyframes pulse {
+  0% { transform:scale(1) }
+  100% { transform:scale(1.05) }
+}
 
 .status-badge { display:inline-flex; align-items:center; gap:0.5rem; padding:0.25rem 0.6rem; border-radius:999px; font-weight:700 }
 .status-badge.live { background: linear-gradient(90deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06)); color:var(--success) }

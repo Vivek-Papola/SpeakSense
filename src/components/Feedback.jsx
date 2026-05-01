@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback, useMemo } from 'react'
+import { useState, useEffect, useContext, useCallback } from 'react'
 import './Feedback.css'
 import ProgressContext from '../context/ProgressContext'
 
@@ -66,16 +66,18 @@ function generateSuggestions(score, stopwordPct, pronunciationMistakes, fluencyE
   return suggestions.length > 0 ? suggestions : ['Keep practicing!']
 }
 
-function Feedback({ transcript, duration, onScoreCalculated }) {
+function Feedback({ transcript, duration, onScoreCalculated, apiAnalysis }) {
   const [analysis, setAnalysis] = useState(null)
   const [loading, setLoading] = useState(false)
   const { savePractice } = useContext(ProgressContext) || {}
+  const hasApiAnalysis = !!apiAnalysis
 
 
 
   
 
-  const analyzeSpeech = useCallback((text) => {
+  // Use API analysis if available, otherwise generate client-side
+  const performAnalysis = useCallback((text) => {
     setLoading(true)
     setTimeout(() => {
       const words = text.toLowerCase().split(/\s+/).filter(w => w.length > 0)
@@ -109,7 +111,8 @@ function Feedback({ transcript, duration, onScoreCalculated }) {
           ...(fluencyErrors > 0 ? [`${fluencyErrors} fluency error(s) detected`] : []),
           ...(duration < 120 ? [`Did not meet minimum duration of 2 minutes`] : [])
         ],
-        suggestions: generateSuggestions(score, stopwordPercentage, pronunciationMistakes, fluencyErrors)
+        suggestions: generateSuggestions(score, stopwordPercentage, pronunciationMistakes, fluencyErrors),
+        source: 'client'
       }
       setAnalysis(result)
       setLoading(false)
@@ -124,19 +127,127 @@ function Feedback({ transcript, duration, onScoreCalculated }) {
             fluencyErrors: result.fluencyErrors,
           })
         }
-      } catch {
+      } catch (e) {
         // ignore
       }
       if (onScoreCalculated) onScoreCalculated(result)
     }, 1000)
   }, [duration, savePractice, onScoreCalculated])
 
+  // Handle API result when available
+  const processApiAnalysis = useCallback((apiResult) => {
+    const words = transcript.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+    const totalWords = words.length
+    const stopwordCount = words.filter(w => STOPWORDS.has(w.replace(/[^\w]/g, ''))).length
+    const stopwordPercentage = totalWords > 0 ? (stopwordCount / totalWords) * 100 : 0
+    const fluencyErrors = detectFluencyErrors(transcript)
+    
+    // Parse API result - handle different possible response formats
+    let overallScore = 85
+    let pronunciationMistakes = 2
+    let mistakes = []
+    let suggestions = []
+    
+    if (apiResult) {
+      // Extract score from various possible API response formats
+      if (apiResult.score !== undefined) {
+        overallScore = apiResult.score
+      } else if (apiResult.overallScore !== undefined) {
+        overallScore = apiResult.overallScore
+      } else if (apiResult.results?.score !== undefined) {
+        overallScore = apiResult.results.score
+      }
+      
+      // Extract pronunciation info
+      if (apiResult.pronunciationMistakes !== undefined) {
+        pronunciationMistakes = apiResult.pronunciationMistakes
+      } else if (apiResult.mistakes?.length > 0) {
+        pronunciationMistakes = Math.min(apiResult.mistakes.length, 10)
+      } else if (apiResult.errors?.pronunciation !== undefined) {
+        pronunciationMistakes = apiResult.errors.pronunciation
+      }
+      
+      // Build mistakes array from API
+      if (apiResult.mistakes && Array.isArray(apiResult.mistakes)) {
+        mistakes = [...apiResult.mistakes]
+      } else if (apiResult.errors) {
+        const errorMsgs = []
+        if (apiResult.errors.pronunciation) errorMsgs.push(`${apiResult.errors.pronunciation} pronunciation issue(s)`)
+        if (apiResult.errors.fluency) errorMsgs.push(`${apiResult.errors.fluency} fluency issue(s)`)
+        if (apiResult.errors.grammar) errorMsgs.push(`Grammar: ${apiResult.errors.grammar}`)
+        mistakes = [...errorMsgs, ...mistakes]
+      }
+      
+      // Build suggestions from API
+      if (apiResult.suggestions && Array.isArray(apiResult.suggestions)) {
+        suggestions = [...apiResult.suggestions]
+      } else if (apiResult.feedback) {
+        suggestions = [apiResult.feedback]
+      }
+    }
+    
+    if (mistakes.length === 0) {
+      if (stopwordPercentage > 30) mistakes.push(`Used ${stopwordCount} stopwords (${Math.round(stopwordPercentage)}% of words)`)
+      if (pronunciationMistakes > 0) mistakes.push(`${pronunciationMistakes} pronunciation issue(s) detected`)
+      if (fluencyErrors > 0) mistakes.push(`${fluencyErrors} fluency error(s) detected`)
+      if (duration < 120) mistakes.push(`Did not meet minimum duration of 2 minutes`)
+    }
+    
+    if (suggestions.length === 0) {
+      suggestions = generateSuggestions(overallScore, stopwordPercentage, pronunciationMistakes, fluencyErrors)
+    }
+    
+    const result = {
+      overallScore: Math.max(0, Math.min(100, Math.round(overallScore))),
+      phonemeScores: apiResult?.phonemes || apiResult?.phonemeScores || generatePhonemeScores(Math.round(overallScore)),
+      totalWords,
+      stopwordCount,
+      stopwordPercentage: Math.round(stopwordPercentage * 10) / 10,
+      pronunciationMistakes,
+      fluencyErrors,
+      duration,
+      mistakes,
+      suggestions,
+      source: 'api',
+      rawApiResponse: apiResult
+    }
+    
+      setAnalysis(result)
+      setLoading(false)
+      
+      try {
+        typeof savePractice === 'function' && savePractice({
+          score: result.overallScore,
+          duration: result.duration,
+          totalWords: result.totalWords,
+          stopwords: result.stopwordCount,
+          pronunciationMistakes: result.pronunciationMistakes,
+          fluencyErrors: result.fluencyErrors,
+        })
+      } catch (e) {
+        // ignore save errors
+      }
+      
+      if (onScoreCalculated) onScoreCalculated(result)
+  }, [transcript, duration, savePractice, onScoreCalculated])
+
+   const analyzeSpeech = useCallback((text) => {
+    if (hasApiAnalysis) {
+      processApiAnalysis(hasApiAnalysis)
+    } else {
+      performAnalysis(text)
+    }
+  }, [hasApiAnalysis, performAnalysis, processApiAnalysis])
+
   useEffect(() => {
-    if (transcript && transcript.trim()) {
+    if (hasApiAnalysis) {
+      // API analysis was already performed, process it via analyzeSpeech
+      analyzeSpeech(transcript)
+    } else if (transcript && transcript.trim()) {
       const id = setTimeout(() => analyzeSpeech(transcript), 100)
       return () => clearTimeout(id)
     }
-  }, [transcript])
+  }, [transcript, hasApiAnalysis, analyzeSpeech])
 
   if (loading) {
     return (
@@ -161,14 +272,26 @@ function Feedback({ transcript, duration, onScoreCalculated }) {
     <div className="feedback-container">
       <h3>Your Performance Analysis</h3>
       
-      <div className="score-display">
+       <div className="score-display">
         <div className="score-circle" style={{ borderColor: scoreColor }}>
           <span className="score-value" style={{ color: scoreColor }}>
             {analysis.overallScore}
           </span>
           <span className="score-label">/ 100</span>
         </div>
+        {analysis.source === 'api' && (
+          <div className="analysis-source">
+            <small>AI Analysis</small>
+          </div>
+        )}
       </div>
+
+      {analysis.feedbackText && (
+        <div className="feedback-summary">
+          <h4>Feedback</h4>
+          <p>{analysis.feedbackText}</p>
+        </div>
+      )}
 
       <div className="metrics-grid">
         <div className="metric-card">
