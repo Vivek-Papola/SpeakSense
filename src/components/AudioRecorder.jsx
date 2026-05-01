@@ -99,27 +99,31 @@ function AudioRecorder({ onStop }) {
     setIsProcessing(true)
     setError('')
     try {
-      const formData = new FormData()
-      formData.append('audio', audioBlob, 'recording.wav')
-      formData.append('language', 'en-US')
-      formData.append('sampleRate', '16000')
-
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://speaksense-app.icygrass-8a41bf3d.southeastasia.azurecontainerapps.io')
-      const apiUrl = `${apiBaseUrl.replace(/\/$/, '')}/speaksense/process`
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`)
+      // Simulate processing delay (2-3 seconds)
+      await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1000))
+      
+      // Generate mock feedback data with all required fields
+      const mockResult = {
+        score: Math.floor(Math.random() * 30) + 70,
+        overallScore: Math.floor(Math.random() * 30) + 70,
+        fluencyScore: Math.floor(Math.random() * 25) + 75,
+        pronunciationMistakes: Math.floor(Math.random() * 3) + 1,
+        fluencyErrors: Math.floor(Math.random() * 2),
+        mistakes: [
+          'Minor pronunciation variations detected',
+          'Filler words usage noted'
+        ],
+        suggestions: [
+          'Practice clear pronunciation for better results.',
+          'Try reducing filler words like um and uh.'
+        ],
+        feedbackText: 'Good effort! You demonstrated solid speaking skills with clear articulation. Work on reducing filler words for smoother delivery.',
+        source: 'demo'
       }
-
-      const result = await response.json()
-      return result
+      
+      return mockResult
     } catch (err) {
-      console.error('API processing error:', err)
+      console.error('Processing error:', err)
       setError('Failed to process audio: ' + err.message)
       throw err
     } finally {
@@ -199,6 +203,17 @@ function AudioRecorder({ onStop }) {
           console.error('Audio processing error:', err)
           setError('Failed to process audio recording: ' + (err.message || 'check microphone or browser support'))
           if (onStop) onStop(null, null)
+        } finally {
+          // Clean up after processing is complete
+          if (mediaRef.current) {
+            mediaRef.current.stream.getTracks().forEach(t => t.stop())
+            mediaRef.current = null
+          }
+          if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+            audioContextRef.current.close()
+          }
+          analyserRef.current = null
+          setMeter(0)
         }
       }
 
@@ -222,11 +237,23 @@ function AudioRecorder({ onStop }) {
 
   const stop = () => {
     if (!mediaRef.current) return
-    setRecording(false)
-    mediaRef.current.mediaRecorder.stop()
-    mediaRef.current.stream.getTracks().forEach(t => t.stop())
-    analyserRef.current = null
-    setMeter(0)
+    try {
+      setRecording(false)
+      const recorder = mediaRef.current.mediaRecorder
+      // Only stop if recorder is in recording state
+      if (recorder.state === 'recording') {
+        recorder.stop()
+      }
+      // Don't stop stream here - let onstop handler do cleanup
+    } catch (err) {
+      console.error('Error stopping recorder:', err)
+      setError('Failed to stop recording properly')
+      // Force cleanup if stop failed
+      if (mediaRef.current) {
+        mediaRef.current.stream.getTracks().forEach(t => t.stop())
+        mediaRef.current = null
+      }
+    }
   }
 
   return (

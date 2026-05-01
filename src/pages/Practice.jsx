@@ -84,27 +84,25 @@ function Practice() {
   }
 
   const handleStop = (finalTranscript, finalDuration, apiResult) => {
-    setTranscript(finalTranscript)
-    setDuration(finalDuration)
+    setTranscript(finalTranscript || '')
+    setDuration(finalDuration || 0)
     setHasCompleted(true)
     setIsRecording(false)
     setProgress(0)
     setTimeRemaining(120)
-    if (apiResult) {
-      setApiAnalysis(apiResult)
-      setIsProcessing(false)
-    } else {
-      setApiAnalysis(null)
-      setIsProcessing(true)
-    }
+    // Always provide apiResult (VoiceInput always returns one)
+    setApiAnalysis(apiResult || null)
+    setIsProcessing(false)
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current)
     }
   }
 
   const handleApiProcess = (apiResult) => {
-    setApiAnalysis(apiResult)
-    setIsProcessing(false)
+    if (apiResult) {
+      setApiAnalysis(apiResult)
+      setIsProcessing(false)
+    }
   }
 
   const stopRecordingAfterTimer = () => {
@@ -318,16 +316,7 @@ function Practice() {
             </div>
           )}
 
-          {hasCompleted && isProcessing && (
-            <div className="feedback-section">
-              <div style={{ color: 'var(--muted)', textAlign: 'center', padding: '1.5rem' }}>
-                <h4>Processing your audio...</h4>
-                <p>Please wait while we send your recording to the feedback server.</p>
-              </div>
-            </div>
-          )}
-
-          {hasCompleted && !isProcessing && (
+          {hasCompleted && (
             <div className="feedback-section">
               <Feedback 
                 transcript={transcript} 
