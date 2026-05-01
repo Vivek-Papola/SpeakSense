@@ -83,15 +83,20 @@ function Practice() {
     setTranscript((prev) => prev + text)
   }
 
-  const handleStop = (finalTranscript, finalDuration) => {
+  const handleStop = (finalTranscript, finalDuration, apiResult) => {
     setTranscript(finalTranscript)
     setDuration(finalDuration)
     setHasCompleted(true)
     setIsRecording(false)
     setProgress(0)
     setTimeRemaining(120)
-    setApiAnalysis(null)
-    setIsProcessing(true)
+    if (apiResult) {
+      setApiAnalysis(apiResult)
+      setIsProcessing(false)
+    } else {
+      setApiAnalysis(null)
+      setIsProcessing(true)
+    }
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current)
     }
