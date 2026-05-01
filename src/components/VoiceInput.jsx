@@ -99,7 +99,7 @@ const VoiceInput = forwardRef(function VoiceInput({ onTranscript, onStop, minDur
       formData.append('language', 'en-US')
       formData.append('sampleRate', '16000')
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'https://speaksense-app.icygrass-8a41bf3d.southeastasia.azurecontainerapps.io')
       const apiUrl = `${apiBaseUrl.replace(/\/$/, '')}/speaksense/process`
 
       const response = await fetch(apiUrl, {
